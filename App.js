@@ -5,8 +5,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { LogBox } from 'react-native';
+import { getFirestore, disableNetwork, enableNetwork } from 'firebase/firestore';
+import { LogBox, Alert } from 'react-native';
+import { useEffect } from 'react';
+import { useNetInfo } from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 //create navigator
 const Stack = createNativeStackNavigator();
@@ -23,6 +26,18 @@ const App = () => {
     appId: "1:74615674988:web:8c3f1de1f53b7e6288a049"
   };
 
+  //connection status
+  const connectionStatus = useNetInfo();
+  //if user is not connected to the internet, disable trying to connect to the database
+  useEffect(() => {
+    if (connectionStatus.isConnected === false) {
+      Alert.alert("Connection Lost!");
+      disableNetwork(db);
+    } else if (connectionStatus.isConnected === true) {
+      enableNetwork(db);
+    }
+  }, [connectionStatus.isConnected]);
+
   //Initialize Firebase with the provided configuration
     const app = initializeApp(firebaseConfig);
   //Create a Firestore database instance
@@ -37,7 +52,7 @@ const App = () => {
         />
         <Stack.Screen
           name="Chat"> 
-            {(props) => <Chat db={db} {...props} />}
+            {(props) => <Chat db={db} isConnected={connectionStatus.isConnected} {...props} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
