@@ -10,75 +10,92 @@ const Chat = ({ route, navigation, db, isConnected }) => {
     const id = route.params.id;
     const [messages, setMessages] = useState([]);
 
-    // Function to send message
-    const onSend = (newMessages) => {
-        addDoc(collection(db, 'messages'), newMessages[0]);
+    const loadCachedMessages = async () => {
+        try {
+          const cachedMessages = await AsyncStorage.getItem('messages');
+          if (cachedMessages !== null) {
+            setMessages(JSON.parse(cachedMessages));
+          }
+        } catch (error) {
+          console.error("Error loading cached messages:", error.message);
+        }
+      };
+
+      // Append the new messages to the old ones
+  const onSend = async (newMessages) => {
+    try {
+      await addDoc(collection(db, "messages"), newMessages[0]);
+    } catch (error) {
+      console.error("Error adding message to Firestore:", error.message);
     }
-    // Function to change the background color of the messages
-    const renderBubble = (props) => {
-        return (<Bubble 
-            {...props}
-            wrapperStyle={{
-                right: {
-                    backgroundColor: "#000"
-                },
-                left: {
-                    backgroundColor: "#FFF"
-                }
-            }}
-        />
-        );
+  };
+
+  const renderInputToolbar = (props) => {
+    // Render input toolbar only when connected
+    return isConnected ? <InputToolbar {...props} /> : null;
+  };
+
+  // Define the individual style of the bubble
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: "#000",
+          },
+          left: {
+            backgroundColor: "#FFF",
+          },
+        }}
+      />
+    );
+  };
+
+
+  const cachedMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem("messages", JSON.stringify(messagesToCache));
+    } catch (error) {
+      console.error("Error caching messages:", error.message);
+    }
+  };
+
+  useEffect(() => {
+    let unsubMessages;
+
+    const fetchMessages = async () => {
+      try {
+        const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
+        unsubMessages = onSnapshot(q, (documentsSnapshot) => {
+          let newMessages = [];
+          documentsSnapshot.forEach((doc) => {
+            newMessages.push({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: new Date(doc.data().createdAt?.toMillis()), // convert createdAt to Date object
+            });
+          });
+          cachedMessages(newMessages);
+          setMessages(newMessages);
+        });
+
+    } catch (error) {
+        console.error("Error fetching messages:", error.message);
+      }
     };
 
-    const loadCachedMessages = async () => {
-        const cachedMessages = (await AsyncStorage.getItem("messages")) || [];
-        setLists(JSON.parse(cachedMessages));
-      };
-    
-      const cacheMessages = async (messagesToCache) => {
-        try {
-          await AsyncStorage.setItem("messages", JSON.stringify(messagesToCache));
-        } catch (error) {
-          console.log(error.message);
-        }
-      };
-      //local storage code
-      let unsubMessages;
+    if (isConnected) {
+      fetchMessages();
+    } else {
+      loadCachedMessages();
+    }
 
-   // Title for the screen
-    useEffect(() => {
-        navigation.setOptions({ title: username });
-        
-        if (isConnected === true) {
-            if (unsubMessages) unsubMessages();
-            unsubMessages = null;
-            const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-            unsubMessages = onSnapshot(q, (docs) => {
-              let newMessages = [];
-              docs.forEach((doc) => {
-                newMessages.push({
-                  id: doc.id,
-                  ...doc.data(),
-                  createdAt: new Date(doc.data().createdAt.toMillis()),
-                });
-              });
-              cacheMessages(newMessages);
-              setMessages(newMessages);
-            });
-        } else {
-            loadCachedMessages();
-      
+    return () => {
+        if (unsubMessages) {unsubMessages();
         }
-
-        return () => {
-         if( unsubMessages ) unsubMessages();
-        }
-    }, []);
-    
-    const renderInputToolbar = (props) => {
-        if (isConnected) return <InputToolbar {...props} />;
-        else return null;
-      };
+    };
+    }, [db, isConnected]);
 
     return (
       <View style={[styles.container, {backgroundColor: color,}]}>
