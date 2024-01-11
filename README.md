@@ -7,7 +7,7 @@ provide users with a chat interface and options to share images and their
 location.
 
 <img src="/assets/screenshot1.PNG" alt="app screenshot" style="width:200px;"/>
-<img src="/assets/screenshot2.PNG" alt="app screenshot" style="wideth:200px;"/>
+<img src="/assets/screenshot2.PNG" alt="app screenshot" style="width:200px;"/>
 
 
 ## Technologies:
