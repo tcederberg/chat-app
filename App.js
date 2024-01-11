@@ -2,8 +2,7 @@ import Start from './components/Start';
 import Chat from './components/Chat';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { getStorage } from 'firebase/storage';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, disableNetwork, enableNetwork } from 'firebase/firestore';
 import { LogBox, Alert } from 'react-native';
@@ -42,6 +41,8 @@ const App = () => {
     const app = initializeApp(firebaseConfig);
   //Create a Firestore database instance
     const db = getFirestore(app);
+  // Initialize Cloud Firestore Storage and get a reference to the service
+    const storage = getStorage(app);
 
   return (
     <NavigationContainer>
@@ -52,7 +53,13 @@ const App = () => {
         />
         <Stack.Screen
           name="Chat"> 
-            {(props) => <Chat db={db} isConnected={connectionStatus.isConnected} {...props} />}
+            {(props) => (
+              <Chat 
+                db={db} 
+                storage={storage}
+                isConnected={connectionStatus.isConnected} 
+                {...props} />
+              )}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
